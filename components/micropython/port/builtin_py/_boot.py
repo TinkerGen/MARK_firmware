@@ -3,13 +3,11 @@ import os, sys, time
 sys.path.append('')
 sys.path.append('.')
 
-# chdir to "/sd" or "/flash"
+# chdir to "/flash" - loading from SD card breaks custom model functionality
 devices = os.listdir("/")
 if "sd" in devices:
-    os.chdir("/sd")
     sys.path.append('/sd')
-else:
-    os.chdir("/flash")
+os.chdir("/flash")
 sys.path.append('/flash')
 
 print("[MaixPy] init end") # for IDE
