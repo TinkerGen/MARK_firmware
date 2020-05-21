@@ -305,7 +305,7 @@ int sensro_ov_detect(sensor_t* sensor)
 					/*ov9650_init*/
                     break;
                 case OV2640_ID:
-                    mp_printf(&mp_plat_print, "[MAIXPY]: find ov2640\n");
+                    mp_printf(&mp_plat_print, "[cyberEye]: find ov2640\n");
                     init_ret = ov2640_init(sensor);
                     break;
                 // case OV7725_ID:
@@ -314,11 +314,11 @@ int sensro_ov_detect(sensor_t* sensor)
                 //     init_ret = ov7725_init(sensor);
                 //     break;
                 case OV7740_ID:
-                    mp_printf(&mp_plat_print, "[MAIXPY]: find ov7740\n");
+                    mp_printf(&mp_plat_print, "[cyberEye]: find ov7740\n");
                     init_ret = ov7740_init(sensor);
                     break;
                 case OV3660_ID:
-                    mp_printf(&mp_plat_print, "[MAIXPY]: find ov3660\n");
+                    mp_printf(&mp_plat_print, "[cyberEye]: find ov3660\n");
                     init_ret = ov3660_init(sensor);
                     break;
                 default:
@@ -395,12 +395,12 @@ int sensor_init_dvp(mp_int_t freq, bool default_freq)
         // mp_printf(&mp_plat_print, "[MAIXPY]: find ov sensor\n");
     }
     else if(0 == sensro_gc_detect(&sensor, true)){//find gc0328 sensor
-        mp_printf(&mp_plat_print, "[MAIXPY]: find gc3028\n");
+        mp_printf(&mp_plat_print, "[cyberEye]: find gc3028\n");
         cambus_set_writeb_delay(2);
     }
     else
     {
-        mp_printf(&mp_plat_print, "[MAIXPY]: no sensor\n");
+        mp_printf(&mp_plat_print, "[cyberEye]: no sensor\n");
         init_ret = -1;
     }
     if(default_freq && sensor.chip_id == OV7740_ID)
@@ -545,7 +545,7 @@ int binocular_sensor_scan()
     mp_hal_delay_ms(10);   
     sensor.slv_addr = cambus_scan();
     if (sensor.slv_addr == 0) {
-        mp_printf(&mp_plat_print, "[MAIXPY]: Can not find sensor first\n");
+        mp_printf(&mp_plat_print, "[cyberEye]: Can not find sensor first\n");
         /* Sensor has been held in reset,
            so the reset line is active low */
         sensor.reset_pol = ACTIVE_LOW;
@@ -555,7 +555,7 @@ int binocular_sensor_scan()
         /* Probe again to set the slave addr */
         sensor.slv_addr = cambus_scan();
         if (sensor.slv_addr == 0) {
-            mp_printf(&mp_plat_print, "[MAIXPY]: No sensor\n");
+            mp_printf(&mp_plat_print, "[cyberEye]: No sensor\n");
             return -1;
         }
     }
@@ -565,7 +565,7 @@ int binocular_sensor_scan()
     mp_hal_delay_ms(10);
     if(sensor.slv_addr != cambus_scan())
     {
-        mp_printf(&mp_plat_print, "[MAIXPY]: sensors don't match\n");
+        mp_printf(&mp_plat_print, "[cyberEye]: sensors don't match\n");
         return -2;
     }
     // Clear sensor chip ID.
@@ -596,11 +596,11 @@ int binocular_sensor_scan()
 					/*ov9650_init*/
                     break;
                 case OV2640_ID:
-                    mp_printf(&mp_plat_print, "[MAIXPY]: find ov2640\n");
+                    mp_printf(&mp_plat_print, "[cyberEye]: find ov2640\n");
                     init_ret = ov2640_init(&sensor);
                     break;
                 case OV7740_ID:
-                    mp_printf(&mp_plat_print, "[MAIXPY]: find ov7740\n");
+                    mp_printf(&mp_plat_print, "[cyberEye]: find ov7740\n");
                     init_ret = ov7740_init(&sensor);
                     break;
                 case OV7725_ID:
@@ -646,20 +646,20 @@ int binocular_sensor_reset(mp_int_t freq)
     else{
         DCMI_PWDN_HIGH();
         if(0 == sensro_gc_detect(&sensor, false)){//find gc0328 sensor
-            mp_printf(&mp_plat_print, "[MAIXPY]: sensor1 find gc3028\n");
+            mp_printf(&mp_plat_print, "[cyberEye]: sensor1 find gc3028\n");
             cambus_set_writeb_delay(2);
         }
         else{
-            mp_printf(&mp_plat_print, "[MAIXPY]: scan sensor1 error\n");
+            mp_printf(&mp_plat_print, "[cyberEye]: scan sensor1 error\n");
             return -1;
         }
         DCMI_PWDN_LOW();
         if(0 == sensro_gc_detect(&sensor, false)){//find gc0328 sensor
-            mp_printf(&mp_plat_print, "[MAIXPY]: sensor2 find gc3028\n");
+            mp_printf(&mp_plat_print, "[cyberEye]: sensor2 find gc3028\n");
             cambus_set_writeb_delay(2);
         }
         else{
-            mp_printf(&mp_plat_print, "[MAIXPY]: scan sensor2 error\n");
+            mp_printf(&mp_plat_print, "[cyberEye]: scan sensor2 error\n");
             return -1;
         }
     }
@@ -705,7 +705,7 @@ int binocular_sensor_reset(mp_int_t freq)
     mp_hal_delay_ms(10); 
 
     if (sensor.reset(&sensor) != 0) {	//rst reg, set default cfg.
-        mp_printf(&mp_plat_print, "[MAIXPY]: First sensor reset failed\n");
+        mp_printf(&mp_plat_print, "[cyberEye]: First sensor reset failed\n");
         return -1;
     }
 
@@ -718,7 +718,7 @@ int binocular_sensor_reset(mp_int_t freq)
     mp_hal_delay_ms(10);
 
     if (sensor.reset(&sensor) != 0) {	//rst reg, set default cfg.
-        mp_printf(&mp_plat_print, "[MAIXPY]: Second sensor reset failed\n");
+        mp_printf(&mp_plat_print, "[cyberEye]: Second sensor reset failed\n");
         return -1;
     }
 
@@ -1326,7 +1326,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
 		//
 		if(MAIN_FB()->bpp > 3)
 		{
-			mp_printf(&mp_plat_print, "[MAIXPY]: %s | bpp error\n",__func__);
+			mp_printf(&mp_plat_print, "[cyberEye]: %s | bpp error\n",__func__);
 			return -1;
 		}
 

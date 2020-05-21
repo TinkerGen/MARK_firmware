@@ -219,10 +219,10 @@ MP_NOINLINE STATIC spiffs_user_mount_t* init_flash_spiffs()
 	if(FORMAT_FS_FORCE || res != SPIFFS_OK || res==SPIFFS_ERR_NOT_A_FS)
 	{
 		SPIFFS_unmount(&vfs_spiffs->fs);
-		printk("[MAIXPY]:Spiffs Unmount.\n");
-		printk("[MAIXPY]:Spiffs Formating...\n");
+		printk("[cyberEye]:Spiffs Unmount.\n");
+		printk("[cyberEye]:Spiffs Formating...\n");
 		s32_t format_res=SPIFFS_format(&vfs_spiffs->fs);
-		printk("[MAIXPY]:Spiffs Format %s \n",format_res?"failed":"successful");
+		printk("[cyberEye]:Spiffs Format %s \n",format_res?"failed":"successful");
 		if(0 != format_res)
 		{
 			return false;
@@ -235,7 +235,7 @@ MP_NOINLINE STATIC spiffs_user_mount_t* init_flash_spiffs()
 			spiffs_cache_buf,
 			sizeof(spiffs_cache_buf),
 			0);
-		printk("[MAIXPY]:Spiffs Mount %s \n", res?"failed":"successful");
+		printk("[cyberEye]:Spiffs Mount %s \n", res?"failed":"successful");
 		if(!res)
 		{
 
@@ -248,7 +248,7 @@ STATIC bool mpy_mount_spiffs(spiffs_user_mount_t* spiffs)
 {
 	mp_vfs_mount_t *vfs = m_new_obj(mp_vfs_mount_t);
     if (vfs == NULL) {
-        printk("[MaixPy]:can't mount flash\n");
+        printk("[cyberEye]:can't mount flash\n");
 		return false;
     }
     vfs->str = "/flash";
@@ -431,7 +431,7 @@ soft_reset:
     	}
 		if (mounted_sdcard) {
 		}
-		// mp_printf(&mp_plat_print, "[MaixPy] init end\r\n"); // for maixpy ide
+		// mp_printf(&mp_plat_print, "[cyberEye] init end\r\n"); // for maixpy ide
 		// run boot-up scripts
 		mp_hal_set_interrupt_char(CHAR_CTRL_C);
 		int ret = pyexec_frozen_module("_boot.py");
@@ -491,7 +491,7 @@ soft_reset:
 #if MICROPY_ENABLE_GC
 		gc_sweep_all();
 #endif
-		mp_hal_stdout_tx_strn("[MaixPy]: soft reboot\r\n", 23);
+		mp_hal_stdout_tx_strn("[cyberEye]: soft reboot\r\n", 23);
 		mp_deinit();
 		msleep(10);	    
 		goto soft_reset;
@@ -548,11 +548,11 @@ int maixpy_main()
 	uarths_init();
 	uarths_config(115200, 1);
 	printk("\r\n");
-	printk("[MAIXPY]Pll0:freq:%d\r\n",sysctl_clock_get_freq(SYSCTL_CLOCK_PLL0));
-	printk("[MAIXPY]Pll1:freq:%d\r\n",sysctl_clock_get_freq(SYSCTL_CLOCK_PLL1));
-	printk("[MAIXPY]Pll2:freq:%d\r\n",sysctl_clock_get_freq(SYSCTL_CLOCK_PLL2));
-	printk("[MAIXPY]cpu:freq:%d\r\n",sysctl_clock_get_freq(SYSCTL_CLOCK_CPU));
-	printk("[MAIXPY]kpu:freq:%d\r\n",sysctl_clock_get_freq(SYSCTL_CLOCK_AI));
+	printk("[cyberEye]Pll0:freq:%d\r\n",sysctl_clock_get_freq(SYSCTL_CLOCK_PLL0));
+	printk("[cyberEye]Pll1:freq:%d\r\n",sysctl_clock_get_freq(SYSCTL_CLOCK_PLL1));
+	printk("[cyberEye]Pll2:freq:%d\r\n",sysctl_clock_get_freq(SYSCTL_CLOCK_PLL2));
+	printk("[cyberEye]cpu:freq:%d\r\n",sysctl_clock_get_freq(SYSCTL_CLOCK_CPU));
+	printk("[cyberEye]kpu:freq:%d\r\n",sysctl_clock_get_freq(SYSCTL_CLOCK_AI));
 	sysctl_clock_enable(SYSCTL_CLOCK_AI);
 	sysctl_set_power_mode(SYSCTL_POWER_BANK6, SYSCTL_POWER_V18);
 	sysctl_set_power_mode(SYSCTL_POWER_BANK7, SYSCTL_POWER_V18);
@@ -560,7 +560,7 @@ int maixpy_main()
 	rtc_init();
 	rtc_timer_set(2019,1, 1,0, 0, 0);
 	flash_init(&manuf_id, &device_id);
-	printk("[MAIXPY]Flash:0x%02x:0x%02x\r\n", manuf_id, device_id);
+	printk("[cyberEye]Flash:0x%02x:0x%02x\r\n", manuf_id, device_id);
     /* Init SPI IO map and function settings */
     sysctl_set_spi0_dvp_data(1);
 	/* open core 1 */
