@@ -67,15 +67,36 @@ from Maix import FPIOA, GPIO
 # detect boot.py
 main_py = '''
 from fpioa_manager import *
-import os, Maix, lcd, image
+import os, Maix, lcd, image, time
 from Maix import FPIOA, GPIO
+
+first_boot = "first_boot" in os.listdir("/flash")
+
+boot_pressed = 0
 test_pin=16
 fpioa = FPIOA()
 fpioa.set_function(test_pin,FPIOA.GPIO7)
 test_gpio=GPIO(GPIO.GPIO7,GPIO.IN)
+
 lcd.init(color=(255,0,0))
-lcd.rotation(2)
-lcd.draw_string(lcd.width()//2-68,lcd.height()//2-4, "Welcome to cyberEye", lcd.WHITE, lcd.RED)
+lcd.rotation(1)
+
+if first_boot:
+    lcd.display(image.Image('first_boot.jpg'))
+    os.remove("/flash/first_boot")
+    time.sleep(2)
+    from preloaded import *
+else:
+    lcd.display(image.Image('logo.jpg'))
+    start_time =  time.ticks_ms()
+    while (time.ticks_ms() - start_time) < 2000:
+        if test_gpio.value() == 0:
+            boot_pressed += 1
+            time.sleep(0.5)
+            lcd.draw_string(0,0,str(boot_pressed),lcd.RED, lcd.BLACK)
+        if boot_pressed == 2:
+            from preloaded import *
+    
 try:
     from user import *
 except Exception as e:
@@ -83,18 +104,7 @@ except Exception as e:
     lcd.draw_string(0,0,str(e),lcd.RED, lcd.BLACK)
     raise
 
-if test_gpio.value() == 0:
-    print('PIN 16 pulled down, enter test mode')
-    import sensor
-    import image
-    sensor.reset()
-    sensor.set_pixformat(sensor.RGB565)
-    sensor.set_framesize(sensor.QVGA)
-    sensor.run(1)
-    lcd.freq(16000000)
-    while True:
-        img=sensor.snapshot()
-        lcd.display(img)
+
 '''
 
 flash_ls = os.listdir()
