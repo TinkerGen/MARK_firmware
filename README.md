@@ -1,11 +1,13 @@
 <img width=205 src="assets/image/maixpy.png">
 
 <br />
+<img width=205 src="assets/image/mark.png">
 <br />
 
 
 <div class="title_pic">
-    <img src="assets/image/micropython.png"><img src="assets/image/icon_sipeed2.png"  height="60">
+    <img src="assets/image/tlogo-03.png" height="70">
+    <img src="assets/image/icon_sipeed2.png"  height="60">
 </div>
 
 <br />
@@ -25,30 +27,18 @@
 
 <br />
 
-<a href="https://github.com/sipeed/MaixPy/issues?utf8=%E2%9C%93&q=is%3Aissue+label%3A%22good+first+issue%22">
-    <img src="https://img.shields.io/github/issues/sipeed/maixpy/good%20first%20issue.svg" alt="Good first issues" />
-</a>
-<a href="https://github.com/sipeed/MaixPy/issues?q=is%3Aopen+is%3Aissue+label%3Abug">
-    <img src="https://img.shields.io/github/issues/sipeed/maixpy/bug.svg" alt="Bug issues" />
-</a>
-<a href="https://github.com/sipeed/MaixPy/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement">
-    <img src="https://img.shields.io/github/issues/sipeed/maixpy/enhancement.svg" alt="Enhancement issues" />
-</a>
-
-
-
-<br />
-
 [中文](README_ZH.md)
 
 <br />
-<br />
 
-**Let's Sipeed up, Maximize AI's power!**
+**TinkerGen**
 
-**MaixPy, makes AIOT easier!**
+**M.A.R.K. A Robot for AI Education**
 
-Maixpy is designed to make AIOT programming easier, based on the [Micropython](http://www.micropython.org) syntax, running on a very powerful embedded AIOT chip [K210](https://kendryte.com).
+Make A Robot Kit, also known as “M.A.R.K.” is a versatile intelligent car designed for learning about Artificial Intelligence. Using the AI controller which comes with MARK, a child can implement track identification, traffic sign identification, and other AI features to put together a self-driving car. MARK is built around Kendryte a very powerful embedded AIOT chip [K210](https://kendryte.com) and running a [Micropython](http://www.micropython.org) firmware developed jointly by TinkerGen and Sipeed Maixpy.
+
+This repository contains TinkerGen version of MARK Micropython firmware. The Micropython code can be found in [this repository](https://github.com/TinkerGen/Mark-micropython). If you're not sure what you're looking for, think of firmware as an "OS"(like Windows/Linux/Mac OS), which is responsible for low-level hardware control and Micropython code as "programs"(similiar to Office/browser/etc).
+
 > K210 brief: 
 > * Image Recognition with hardware acceleration
 > * Dual core with FPU
@@ -60,46 +50,11 @@ Maixpy is designed to make AIOT programming easier, based on the [Micropython](h
 > * FPIOA (Periphrals can map to any pins)
 > * Peripherals: I2C, SPI, I2S, WDT, TIMER, RTC, UART, GPIO etc.
 
-![](assets/image/maix_bit.png)
-
-## Simple code
-
-Find I2C devices:
-
-```python
-from machine import I2C
-
-i2c = I2C(I2C.I2C0, freq=100000, scl=28, sda=29)
-devices = i2c.scan()
-print(devices)
-```
-
-Take picture:
-
-```python
-import sensor
-import image
-import lcd
-
-lcd.init()
-sensor.reset()
-sensor.set_pixformat(sensor.RGB565)
-sensor.set_framesize(sensor.QVGA)
-sensor.run(1)
-while True:
-    img=sensor.snapshot()
-    lcd.display(img)
-```
-
-## Release
-
-See [Releases page](https://github.com/sipeed/MaixPy/releases)
-
-Get latest commit firmware: [master firmware](http://dl.sipeed.com/MAIX/MaixPy/release/master/)
-
 ## Documentation
 
-Doc refer to [maixpy.sipeed.com](https://maixpy.sipeed.com)
+For information about how to use MARK with Codecraft, go to [MARK webpage](https://www.tinkergen.com/mark).
+
+MaixPy documentation refer to [maixpy.sipeed.com](https://maixpy.sipeed.com)
 
 ## Examples
 
@@ -107,9 +62,7 @@ Doc refer to [maixpy.sipeed.com](https://maixpy.sipeed.com)
 
 ## Build From Source
 
-See [build doc](build.md)
-
-The historic version see [historic branch](https://github.com/sipeed/MaixPy/tree/historic) (No longer maintained, just keep commit history)
+This repository contains Micropython code that is running on top of compiled firmware. For information about how to build and customize firmware, please see [build doc](https://github.com/TinkerGen/MARK_firmware/blob/cybereye/build.md).
 
 ## License
 
