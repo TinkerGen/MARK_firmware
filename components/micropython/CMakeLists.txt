@@ -32,6 +32,7 @@ if(CONFIG_COMPONENT_MICROPYTHON_ENABLE)
                             "${mpy_port_dir}/src/Maix/include"
                             "${mpy_port_dir}/src/modules/include"
                             "${mpy_port_dir}/src/modules/ultrasonic/include"
+                            "${mpy_port_dir}/src/modules/speech_recognizer/include"
                             "${mpy_port_dir}/src/omv/include"
                             "${mpy_port_dir}/src/omv/boards/MAIX"
                             "${mpy_port_dir}/src/omv/img/include"
@@ -54,6 +55,7 @@ if(CONFIG_COMPONENT_MICROPYTHON_ENABLE)
     endif()
     append_srcs_dir(MPY_PORT_SRCS "port/src/modules")
     append_srcs_dir(MPY_PORT_SRCS "port/src/modules/ultrasonic/src")
+    append_srcs_dir(MPY_PORT_SRCS "port/src/modules/speech_recognizer/src")
     append_srcs_dir(MPY_PORT_SRCS "port/src/modules/ws2812/src")
     append_srcs_dir(MPY_PORT_SRCS "port/src/modules/htpa/src")
     append_srcs_dir(MPY_PORT_SRCS "port/src/omv")
@@ -261,6 +263,12 @@ if(CONFIG_COMPONENT_MICROPYTHON_ENABLE)
         append_srcs_dir(ADD_SRCS "port/src/touchscreen")
         if(CONFIG_MAIXPY_TOUCH_SCREEN_DRIVER_NS2009)
             list(APPEND ADD_INCLUDE "${mpy_port_dir}/src/touchscreen/ns2009/include")
+            append_srcs_dir(ADD_SRCS "port/src/touchscreen/ns2009")
+        endif()
+        if(CONFIG_MAIXPY_TOUCH_SCREEN_DRIVER_FT52XX)
+            list(APPEND ADD_INCLUDE "${mpy_port_dir}/src/touchscreen/ft52xx"
+                                    "${mpy_port_dir}/src/touchscreen/ns2009/include")
+            append_srcs_dir(ADD_SRCS "port/src/touchscreen/ft52xx")
             append_srcs_dir(ADD_SRCS "port/src/touchscreen/ns2009")
         endif()
     endif()

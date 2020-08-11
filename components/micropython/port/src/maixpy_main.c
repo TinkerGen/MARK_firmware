@@ -321,39 +321,52 @@ void load_config_from_spiffs(config_data_t* config)
 
 #if MICROPY_ENABLE_COMPILER
 void pyexec_str(vstr_t* str) {
+	// gc.collect()
+	gc_collect();
+	// save context
+    mp_obj_dict_t *volatile old_globals = mp_globals_get();
+    mp_obj_dict_t *volatile old_locals = mp_locals_get();
+
+	// set new context
+	// mp_obj_t globals = mp_obj_new_dict(0);
+    mp_obj_t locals = mp_obj_new_dict(0);
+	mp_obj_dict_store(locals, MP_OBJ_NEW_QSTR(MP_QSTR___name__), MP_OBJ_NEW_QSTR(MP_QSTR___main__));
+	mp_globals_set(MP_OBJ_TO_PTR(locals));
+    mp_locals_set(MP_OBJ_TO_PTR(locals));
+
     nlr_buf_t nlr;
     if (nlr_push(&nlr) == 0) {
         mp_lexer_t *lex = mp_lexer_new_from_str_len(MP_QSTR__lt_stdin_gt_, str->buf, str->len, 0);
         qstr source_name = lex->source_name;
         mp_parse_tree_t parse_tree = mp_parse(lex, MP_PARSE_FILE_INPUT);
-        mp_obj_t module_fun = mp_compile(&parse_tree, source_name, MP_EMIT_OPT_NONE, true);
+        mp_obj_t module_fun = mp_compile(&parse_tree, source_name, MP_EMIT_OPT_NONE, false);
         mp_call_function_0(module_fun);
         nlr_pop();
+		mp_globals_set(old_globals);
+        mp_locals_set(old_locals);
+#if MICROPY_PY_THREAD
+		mp_thread_deinit();
+#endif
     } else {
-        // uncaught exception
+		mp_globals_set(old_globals);
+        mp_locals_set(old_locals);
+#if MICROPY_PY_THREAD
+		mp_thread_deinit();
+#endif
         mp_obj_print_exception(&mp_plat_print, (mp_obj_t)nlr.ret_val);
     }
 }
 #endif
 
-// void mp_task(void* arg)
-// {
-//     while(1)
-//     {
-//         printk("---1---\r\n");
-//         vTaskDelay(pdMS_TO_TICKS(1000));
-//     }
-// }
-
-void mp_task(
-	void *pvParameter
-	) {
+void mp_task(void *pvParameter)
+{
+		volatile void* tmp;
+		volatile void* sp = &tmp;
 #if MICROPY_PY_THREAD
-		volatile void *stack_p = 0;
-        volatile void *mp_main_stack_top = &stack_p;
-		mp_thread_init(mp_main_stack_top, MP_TASK_STACK_LEN);
-#else
-		volatile void* mp_main_stack_top = (void*)get_sp();
+		TaskStatus_t task_status;
+		vTaskGetInfo(mp_main_task_handle,&task_status,(BaseType_t)pdTRUE,(eTaskState)eInvalid);
+		volatile void *mp_main_stack_base = task_status.pxStackBase;
+		mp_thread_init((void*)mp_main_stack_base, MP_TASK_STACK_LEN);
 #endif
 		config_data_t* config = (config_data_t*)pvParameter;
 #if MICROPY_ENABLE_GC
@@ -367,8 +380,12 @@ void mp_task(
 soft_reset:
 		sipeed_reset_sys_mem();
 		// initialise the stack pointer for the main thread
-		mp_stack_set_top((void *)(uint64_t)mp_main_stack_top);
-		//mp_stack_set_limit(MP_TASK_STACK_SIZE - 1024);//Not open MICROPY_STACK_CHECK
+		mp_stack_set_top((void *)sp);
+#if MICROPY_PY_THREAD 
+		mp_stack_set_limit(MP_TASK_STACK_SIZE - 1024);
+#else
+		mp_stack_set_limit(32768); // stack size 32k set in ld
+#endif
 #if MICROPY_ENABLE_GC
 		gc_init(gc_heap, gc_heap + config->gc_heap_size);
 		printk("gc heap=%p-%p(%d)\r\n",gc_heap, gc_heap + config->gc_heap_size, config->gc_heap_size);
@@ -482,6 +499,7 @@ soft_reset:
 				{
 					mp_obj_print_exception(&mp_plat_print, (mp_obj_t)nlr.ret_val);
 				}
+				ide_dbg_on_script_end();
 			}
 		}while(MP_STATE_PORT(Maix_stdio_uart)->ide_debug_mode);
 

@@ -168,7 +168,7 @@ void InfoNES_LoadFrame()
 
 
 /* Get a joypad state */
-//wasd:上下左右  kl:AB nm:sel,start
+//wasd:up down left right  kl:AB nm:sel,start
 
 #define SELECT_MASK    (1<<0)
 #define L3_MASK        (1<<1)
