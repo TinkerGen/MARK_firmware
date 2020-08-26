@@ -44,7 +44,7 @@ This repository contains TinkerGen version of MARK Micropython firmware. The Mic
 > * Dual core with FPU
 > * 8MB(6MB+2MB) RAM
 > * 16MB external Flash
-> * Max 800MHz CPU freq (see the dev board in detail)
+> * Max 800MHz CPU freq (see the dev board in detail, usually 400MHz)
 > * Microphone array(8 mics)
 > * Hardware AES SHA256
 > * FPIOA (Periphrals can map to any pins)
@@ -63,6 +63,16 @@ MaixPy documentation refer to [maixpy.sipeed.com](https://maixpy.sipeed.com)
 ## Build From Source
 
 This repository contains Micropython code that is running on top of compiled firmware. For information about how to build and customize firmware, please see [build doc](https://github.com/TinkerGen/MARK_firmware/blob/cybereye/build.md).
+
+## Use online compilation tools to customize firmware
+
+Go to [maixhub.com](https://www.maixhub.com/compile.html) to use online compilation to customize the functions you need
+
+
+## Model hub: Maixhub.com
+
+Find more models on [Maixhub.com](https://maixhub.com)
+
 
 ## License
 
