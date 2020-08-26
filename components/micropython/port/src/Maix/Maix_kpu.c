@@ -63,30 +63,30 @@ static int check_img_format(image_t* arg_img, uint16_t w, uint16_t h, uint16_t c
 {
 	if (arg_img->pix_ai == NULL)
 	{
-		mp_printf(&mp_plat_print, "[cyberEye]kpu: pix_ai is NULL!\r\n");
+		mp_printf(&mp_plat_print, "[MAIXPY]kpu: pix_ai is NULL!\r\n");
 		return -1;
 	}
 	if(abs(kmodel_type)==3){ 
 		if(arg_img->w != w || arg_img->h != h) 
 		{
-			mp_printf(&mp_plat_print, "[cyberEye]kpu: img w=%d,h=%d, but model w=%d,h=%d\r\n",\
+			mp_printf(&mp_plat_print, "[MAIXPY]kpu: img w=%d,h=%d, but model w=%d,h=%d\r\n",\
 					arg_img->w, arg_img->h, w, h);
 			return -1;
 		}
 		if(arg_img->bpp == IMAGE_BPP_GRAYSCALE && ch != 1)
 		{
-			mp_printf(&mp_plat_print, "[cyberEye]kpu: grayscale img, but model channel=%d\r\n", ch);
+			mp_printf(&mp_plat_print, "[MAIXPY]kpu: grayscale img, but model channel=%d\r\n", ch);
 			return -1;
 		}
 		if(arg_img->bpp == IMAGE_BPP_RGB565 && ch != 3)
 		{
-			mp_printf(&mp_plat_print, "[cyberEye]kpu: RGB img, but model channel=%d\r\n", ch);
+			mp_printf(&mp_plat_print, "[MAIXPY]kpu: RGB img, but model channel=%d\r\n", ch);
 			return -1;
 		}
 	}
 	if(arg_img->bpp != IMAGE_BPP_GRAYSCALE && arg_img->bpp != IMAGE_BPP_RGB565)
 	{
-		mp_printf(&mp_plat_print, "[cyberEye]kpu: img bpp not support yet!\r\n");
+		mp_printf(&mp_plat_print, "[MAIXPY]kpu: img bpp not support yet!\r\n");
 		return -1;
 	}
 	//here is right image format
@@ -128,10 +128,11 @@ static void py_kpu_net_obj_print(const mp_print_t *print, mp_obj_t self_in, mp_p
                 );
 }
 
+STATIC mp_obj_t py_kpu_deinit(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args);
 mp_obj_t py_kpu_net_del(mp_obj_t self_in)
 {
     mp_printf(&mp_plat_print, "kpu_net __del__\r\n");
-    sipeed_kpu_model_destroy(&((py_kpu_net_obj_t *)self_in)->kmodel_ctx);
+    py_kpu_deinit(1, &self_in, NULL);
     return mp_const_none;
 }
 mp_obj_t py_kpu_net_model_addr(mp_obj_t self_in) { return ((py_kpu_net_obj_t *)self_in)->model_addr; }
@@ -186,11 +187,15 @@ static char* get_kpu_err_str(int err)
     switch(err)
 	{
 	case SIPEED_KPU_ERR_NONE:
-		return "ERR_NONE:shouldn't come to here";
+		return "ERR_NONE";
 	case SIPEED_KPU_ERR_PARAM:
 		return "ERR_PARAM: please check param, load address or kmodel file name";
 	case SIPEED_KPU_ERR_KMODEL_VERSION:
+    #if CONFIG_MICROPYTHON_KMODEL_V4_SUPPORT
 		return "ERR_KMODEL_VERSION: only support kmodel V3/V4 now";
+    #else
+        return "ERR_KMODEL_VERSION: only support kmodel V3";
+    #endif
 	case SIPEED_KPU_ERR_KMODEL_FORMAT:
 		return "ERR_KMODEL_FORMAT: layer_header.body_size <=0";
 	case SIPEED_KPU_ERR_DECRYPT:
@@ -207,6 +212,14 @@ static char* get_kpu_err_str(int err)
 		return "ERR_MODELS_FULL: we only support load 5 models in the same time";
 	case SIPEED_KPU_ERR_PERMITION:
 		return "ERR_PERMITION";
+    case SIPEED_KPU_ERR_IDX_OUTRANGE:
+        return "SIPEED_KPU_ERR_IDX_OUTRANGE";
+    case SIPEED_KPU_ERR_SIZE_NOTMATCH:
+        return "SIPEED_KPU_ERR_SIZE_NOTMATCH";
+    case SIPEED_KPU_ERR_OUTPUTS_NODONE:
+        return "ERR_OUTPUTS_SET: need kpu.set_outputs() to set shape";
+    case SIPEED_KPU_ERR_NOT_IMPLEMENT:
+        return "ERR_NOT_IMPLEMENT";
 	case SIPEED_KPU_ERR_UNKNOWN:
 	default:
 		return "ERR_UNKNOWN";
@@ -351,7 +364,7 @@ STATIC mp_obj_t py_kpu_class_load(size_t n_args, const mp_obj_t *pos_args, mp_ma
         if(model_addr <= 0)//TODO: address of code end
         {
             m_del(py_kpu_net_obj_t, o,sizeof(py_kpu_net_obj_t));
-            mp_raise_ValueError("[cyberEye]kpu: model_addr must > 0 ");
+            mp_raise_ValueError("[MAIXPY]kpu: model_addr must > 0 ");
             return mp_const_false;
         }
 
@@ -382,7 +395,7 @@ STATIC mp_obj_t py_kpu_class_load(size_t n_args, const mp_obj_t *pos_args, mp_ma
 
         // }
         // else
-        if( (NULL != strstr(path,".kmodel")) || (NULL != strstr(path,".smodel")) )
+        if( (NULL != strstr(path,".kmodel")) || (NULL != strstr(path,".smodel")) || (NULL != strstr(path,".emodel")) )
         {
             int ret = sipeed_kpu_model_load(&o->kmodel_ctx, 0, path, &model_size);
             if(ret != SIPEED_KPU_ERR_NONE)
@@ -394,7 +407,7 @@ STATIC mp_obj_t py_kpu_class_load(size_t n_args, const mp_obj_t *pos_args, mp_ma
         else
         {   
             m_del(py_kpu_net_obj_t, o,sizeof(py_kpu_net_obj_t));
-            mp_raise_ValueError("[cyberEye]kpu: model format don't match, only supply .kmodel ");
+            mp_raise_ValueError("[MAIXPY]kpu: model format don't match, only supply .kmodel ");
             return mp_const_false;
         }
         
@@ -402,7 +415,7 @@ STATIC mp_obj_t py_kpu_class_load(size_t n_args, const mp_obj_t *pos_args, mp_ma
     else
     {
         m_del(py_kpu_net_obj_t, o,sizeof(py_kpu_net_obj_t));
-        mp_raise_TypeError("[cyberEye]kpu: only accept int or string");
+        mp_raise_TypeError("[MAIXPY]kpu: only accept int or string");
         return mp_const_false;
     }    
     o->net_args = mp_const_none;
@@ -415,7 +428,7 @@ STATIC mp_obj_t py_kpu_class_load(size_t n_args, const mp_obj_t *pos_args, mp_ma
 error:
 {
     char* err_msg = get_kpu_err_str(err);
-    nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_ValueError, "[cyberEye]kpu: load error:%d, %s", err, err_msg));
+    nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_ValueError, "[MAIXPY]kpu: load error:%d, %s", err, err_msg));
 }
 }
 
@@ -444,7 +457,7 @@ STATIC mp_obj_t py_kpu_class_load_flash(size_t n_args, const mp_obj_t *pos_args,
         if(model_addr <= 0)//TODO: address of code end
         {
             m_del(py_kpu_net_obj_t, o,sizeof(py_kpu_net_obj_t));
-            mp_raise_ValueError("[cyberEye]kpu: model_addr must > 0 ");
+            mp_raise_ValueError("[MAIXPY]kpu: model_addr must > 0 ");
             return mp_const_false;
         }
 
@@ -462,13 +475,13 @@ STATIC mp_obj_t py_kpu_class_load_flash(size_t n_args, const mp_obj_t *pos_args,
 		o->max_layers = mp_obj_new_int(sipeed_kpu_model_get_layer_num(o->kmodel_ctx));
 		return MP_OBJ_FROM_PTR(o);
 	} else {	
-		mp_raise_ValueError("[cyberEye]kpu: load_flash arg format error: task=kpu.load_flash(flash_addr, is_dual_buf, batch_size, spi_speed)");
+		mp_raise_ValueError("[MAIXPY]kpu: load_flash arg format error: task=kpu.load_flash(flash_addr, is_dual_buf, batch_size, spi_speed)");
 		return mp_const_false;
 	}
 error:
 {
     char* err_msg = get_kpu_err_str(err);
-	nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_ValueError, "[cyberEye]kpu: load_flash error:%d, %s", err, err_msg));
+	nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_ValueError, "[MAIXPY]kpu: load_flash error:%d, %s", err, err_msg));
 }
 return mp_const_none;
 }
@@ -498,11 +511,11 @@ STATIC mp_obj_t py_kpu_class_set_outputs(size_t n_args, const mp_obj_t *pos_args
 		{
 			case SIPEED_KPU_ERR_IDX_OUTRANGE:
 				mp_printf(&mp_plat_print, \
-				"[cyberEye]kpu: set_outputs arg value error:kmodel output idx %d out of range\r\n", idx);
+				"[MAIXPY]kpu: set_outputs arg value error:kmodel output idx %d out of range\r\n", idx);
 				break;
 			case SIPEED_KPU_ERR_SIZE_NOTMATCH:
 				mp_printf(&mp_plat_print, \
-				"[cyberEye]kpu: set_outputs arg value error: w,c,ch size not match output size\r\n");
+				"[MAIXPY]kpu: set_outputs arg value error: w,c,ch size not match output size\r\n");
 				break;
 			case SIPEED_KPU_ERR_NONE:
 				ret=mp_const_true;
@@ -510,13 +523,13 @@ STATIC mp_obj_t py_kpu_class_set_outputs(size_t n_args, const mp_obj_t *pos_args
 			case SIPEED_KPU_ERR_PARAM:
 			default:
 				mp_printf(&mp_plat_print, \
-				"[cyberEye]kpu: set_outputs ctx error, maybe init err\r\n");
+				"[MAIXPY]kpu: set_outputs ctx error, maybe init err\r\n");
 				break;				
 			
 		}
 		return ret;
 	} else {
-		mp_raise_ValueError("[cyberEye]kpu: set_outputs arg format error: set_outputs(task, int idx, int w, int h, int ch)");
+		mp_raise_ValueError("[MAIXPY]kpu: set_outputs arg format error: set_outputs(task, int idx, int w, int h, int ch)");
 		return mp_const_false;
     }
 		
@@ -647,7 +660,7 @@ mp_obj_t py_kpu_calss_yolo2_anchor(mp_obj_t self_in)
     }
     else
     {
-        mp_raise_TypeError("[cyberEye]kpu: object type error");
+        mp_raise_TypeError("[MAIXPY]kpu: object type error");
         return mp_const_false;
     }
 }
@@ -669,7 +682,7 @@ mp_obj_t py_kpu_calss_yolo2_deinit(mp_obj_t self_in)
     }
     else
     {
-        mp_raise_TypeError("[cyberEye]kpu: object type error");
+        mp_raise_TypeError("[MAIXPY]kpu: object type error");
         return mp_const_false;
     }
 }
@@ -697,14 +710,14 @@ STATIC mp_obj_t py_kpu_class_init_yolo2(size_t n_args, const mp_obj_t *pos_args,
         threshold = mp_obj_get_float(args[ARG_threshold].u_obj);
         if(!(threshold >= 0.0 && threshold <= 1.0))
         {
-            mp_raise_ValueError("[cyberEye]kpu: threshold only support 0 to 1");
+            mp_raise_ValueError("[MAIXPY]kpu: threshold only support 0 to 1");
             return mp_const_false;
         }
 
         nms_value = mp_obj_get_float(args[ARG_nms_value].u_obj);
         if(!(nms_value >= 0.0 && nms_value <= 1.0))
         {
-            mp_raise_ValueError("[cyberEye]kpu: nms_value only support 0 to 1");
+            mp_raise_ValueError("[MAIXPY]kpu: nms_value only support 0 to 1");
             return mp_const_false;
         }
 
@@ -723,7 +736,7 @@ STATIC mp_obj_t py_kpu_class_init_yolo2(size_t n_args, const mp_obj_t *pos_args,
         }
         else
         {
-            mp_raise_ValueError("[cyberEye]kpu: anchor_number should > 0");
+            mp_raise_ValueError("[MAIXPY]kpu: anchor_number should > 0");
             return mp_const_false;
         }
 
@@ -768,7 +781,7 @@ STATIC mp_obj_t py_kpu_class_init_yolo2(size_t n_args, const mp_obj_t *pos_args,
     }
     else
     {
-        mp_raise_TypeError("[cyberEye]kpu: kpu_net type error");
+        mp_raise_TypeError("[MAIXPY]kpu: kpu_net type error");
         return mp_const_false;
     }
 }
@@ -874,13 +887,13 @@ STATIC mp_obj_t py_kpu_class_run_yolo2(size_t n_args, const mp_obj_t *pos_args, 
 		if(abs(kmodel_type)==3){
 			if(sipeed_kpu_model_get_input_shape(kpu_net->kmodel_ctx, &w0, &h0, &ch0) != SIPEED_KPU_ERR_NONE)
 			{
-				mp_raise_ValueError("[cyberEye]kpu: first layer not conv layer!\r\n");
+				mp_raise_ValueError("[MAIXPY]kpu: first layer not conv layer!\r\n");
 				return mp_const_none;
 			}
 		}
 		if(check_img_format(arg_img, w0, h0, ch0, kmodel_type))
 		{
-			mp_raise_ValueError("[cyberEye]kpu: check img format err!\r\n");
+			mp_raise_ValueError("[MAIXPY]kpu: check img format err!\r\n");
 			return mp_const_none;
 		}
 		/*****************************region prepare*************************************************/
@@ -893,19 +906,16 @@ STATIC mp_obj_t py_kpu_class_run_yolo2(size_t n_args, const mp_obj_t *pos_args, 
         kpu_detect_rl.nms_value = rl_arg->nms_value;
         if(region_layer_init(&kpu_detect_rl, kpu_net->kmodel_ctx))
 		{
-			mp_raise_ValueError("[cyberEye]kpu: region_layer_init err!\r\n");
+			mp_raise_ValueError("[MAIXPY]kpu: region_layer_init err!\r\n");
 			return mp_const_none;
 		}
 		/*************************************************************************************/
         g_ai_done_flag = 0;
         sipeed_kpu_err_t ret = sipeed_kpu_model_run(kpu_net->kmodel_ctx, arg_img->pix_ai, K210_DMA_CH_KPU, ai_done, NULL);
-		if (ret != 0)
+        if(ret != SIPEED_KPU_ERR_NONE)
         {
-            char* char_temp = m_new(char, 20);
-            if(!char_temp)
-                mp_raise_OSError(MP_ENOMEM);
-            snprintf(char_temp, 20, "run error: %d", ret);
-            mp_raise_msg(&mp_type_OSError, char_temp);
+            char* msg = get_kpu_err_str(ret);
+            mp_raise_msg(&mp_type_OSError, msg);
         }
         while (!g_ai_done_flag)
             ;
@@ -970,7 +980,7 @@ STATIC mp_obj_t py_kpu_class_run_yolo2(size_t n_args, const mp_obj_t *pos_args, 
     }
     else
     {
-        mp_raise_TypeError("[cyberEye]kpu: kpu_net type error");
+        mp_raise_TypeError("[MAIXPY]kpu: kpu_net type error");
         return mp_const_false;
     }
 	
@@ -1004,7 +1014,7 @@ STATIC mp_obj_t py_kpu_deinit(size_t n_args, const mp_obj_t *pos_args, mp_map_t 
     }
     else
     {
-        mp_raise_TypeError("[cyberEye]kpu: kpu_net type error");
+        mp_raise_TypeError("[MAIXPY]kpu: kpu_net type error");
         return mp_const_false;
     }
 
@@ -1283,53 +1293,79 @@ STATIC mp_obj_t py_kpu_forward(size_t n_args, const mp_obj_t *pos_args, mp_map_t
         { MP_QSTR_dma, 		        	MP_ARG_INT, {.u_int = -1} },
     };	//type
     char char_temp[30];
+    bool need_free_data_in = false;
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
 
     if(mp_obj_get_type(args[ARG_kpu_net].u_obj) == &py_kpu_net_obj_type)
     {
-		py_kpu_net_obj_t *kpu_net = MP_OBJ_TO_PTR(args[ARG_kpu_net].u_obj);
-		image_t *arg_img = py_image_cobj(args[ARG_img].u_obj);
         sipeed_kpu_err_t ret;
+		py_kpu_net_obj_t *kpu_net = MP_OBJ_TO_PTR(args[ARG_kpu_net].u_obj);
         sipeed_kpu_use_dma(args[ARG_dma].u_int);
-		int out_index = args[ARG_out_index].u_int;		//which output you want, defaultly index 0
-		uint16_t w0=0;uint16_t h0=0;uint16_t ch0=0;
-		int kmodel_type=sipeed_kpu_model_get_type(kpu_net->kmodel_ctx);
-		if(abs(kmodel_type)==3){
-			if(sipeed_kpu_model_get_input_shape(kpu_net->kmodel_ctx, &w0, &h0, &ch0) != SIPEED_KPU_ERR_NONE)
-			{
-				mp_raise_ValueError("[cyberEye]kpu: first layer not conv layer!\r\n");
+
+        int kmodel_type=sipeed_kpu_model_get_type(kpu_net->kmodel_ctx);
+		uint8_t* data_in;
+        if(py_image_obj_is_image(args[ARG_img].u_obj))
+        {
+            uint16_t w0=0, h0=0, ch0=0;
+            image_t *arg_img = py_image_cobj(args[ARG_img].u_obj);
+            data_in = arg_img->pix_ai;
+            // check V3 model input shape
+            if(abs(kmodel_type)==3){
+                if(sipeed_kpu_model_get_input_shape(kpu_net->kmodel_ctx, &w0, &h0, &ch0) != SIPEED_KPU_ERR_NONE)
+                {
+                    mp_raise_ValueError("[MAIXPY]kpu: first layer not conv layer!\r\n");
+                    return mp_const_none;
+                }
+                
+            }
+            if(check_img_format(arg_img, w0, h0, ch0, kmodel_type))
+            {
+                mp_raise_ValueError("[MAIXPY]kpu: check img format err!\r\n");
+                return mp_const_none;
+            }
+        }
+        else if(MP_OBJ_IS_TYPE(args[ARG_img].u_obj, &mp_type_list))
+        {
+            mp_uint_t arg_list_len;
+			mp_obj_t *arg_list_obj;
+			mp_obj_get_array(args[ARG_img].u_obj, &arg_list_len, &arg_list_obj);
+			if (!arg_list_len) {
+				mp_raise_ValueError("[MAIXPY]kpu: check input list format err!\r\n");
 				return mp_const_none;
 			}
 			
-		}
-		
-		if(check_img_format(arg_img, w0, h0, ch0, kmodel_type))
-		{
-			mp_raise_ValueError("[cyberEye]kpu: check img format err!\r\n");
-			return mp_const_none;
-		}
+			data_in = malloc(arg_list_len*sizeof(float));
+			if(data_in == NULL) {
+				mp_raise_ValueError("[MAIXPY]kpu: alloc list mem err!\r\n");
+				return mp_const_none;
+			}
+            need_free_data_in = true;
+			float* float_in = (float*)data_in;	//理论上malloc申请的地址肯定是4字节对齐的
+			for(mp_uint_t i = 0; i < arg_list_len; i++) {
+				float_in[i] = mp_obj_get_float(arg_list_obj[i]);
+			}
+        }
+        else
+        {
+            mp_raise_ValueError("input not support");
+        }
+		int out_index = args[ARG_out_index].u_int;		//which output you want, defaultly index 0
 		/*************************************************************************************/
 		g_ai_done_flag = 0;
-        ret = sipeed_kpu_model_run(kpu_net->kmodel_ctx, arg_img->pix_ai, K210_DMA_CH_KPU, ai_done, NULL);
-        if (ret == SIPEED_KPU_ERR_RUN_MODEL){
-            mp_raise_msg(&mp_type_OSError, "Cannot run kmodel.\n");
-        } else if(ret == SIPEED_KPU_ERR_OUTPUTS_NODONE){
-			mp_raise_msg(&mp_type_OSError, "You haven't set all outputs shape!\n");
-		}
+        ret = sipeed_kpu_model_run(kpu_net->kmodel_ctx, data_in, K210_DMA_CH_KPU, ai_done, NULL);
+        if(ret != SIPEED_KPU_ERR_NONE)
+        {
+            char* msg = get_kpu_err_str(ret);
+            mp_raise_msg(&mp_type_OSError, msg);
+        }
 		
 		while (!g_ai_done_flag){
-			//DIRTY!!!  dummy code for sync
-			//maybe need change pix_ai's malloc method
-			//use iomem_malloc(xxx) instead
-			/*volatile uint8_t* features;
-			volatile size_t count;
-			ret = sipeed_kpu_get_output(kpu_net->kmodel_ctx, 0, &features, &count);
-			float val;
-			memcpy(&val, features, 4);
-			printf("%c", val>0?'.':' ');*/
 		};
         g_ai_done_flag = 0;
+        if(need_free_data_in) { 
+			free(data_in);
+		}
 
 		/*************************************************************************************/
 		if(abs(kmodel_type)==3) {
@@ -1413,7 +1449,7 @@ STATIC mp_obj_t py_kpu_get_output(size_t n_args, const mp_obj_t *pos_args, mp_ma
 	if((mp_obj_get_type(pos_args[0]) != &py_kpu_net_obj_type) || \
 		(mp_obj_get_type(pos_args[1]) != &mp_type_int))
     {
-		mp_raise_ValueError("[cyberEye]kpu: get_output arg format error: get_output(task, int idx)");
+		mp_raise_ValueError("[MAIXPY]kpu: get_output arg format error: get_output(task, int idx)");
 		return mp_const_false;
 	}
 	
@@ -1520,14 +1556,14 @@ STATIC mp_obj_t py_kpu_fmap(mp_obj_t fmap_obj, mp_obj_t ch_obj)
 	if(ch<0 || ch>= (fmap->ch)) 
 	{
         char str_ret[40];
-        sprintf(str_ret,"[cyberEye]kpu: ch err,input 0~%d\r\n", fmap->ch);
+        sprintf(str_ret,"[MAIXPY]kpu: ch err,input 0~%d\r\n", fmap->ch);
         mp_raise_ValueError(str_ret);
 		return mp_const_none;
 	}
 	if(fmap->typecode != 'B')
 	{
         char str_ret[50];
-        snprintf(str_ret, sizeof(str_ret), "[cyberEye]kpu: can't convet float fmap yet\r\n");
+        snprintf(str_ret, sizeof(str_ret), "[MAIXPY]kpu: can't convet float fmap yet\r\n");
         mp_raise_ValueError(str_ret);
 		return mp_const_none;
 	}
