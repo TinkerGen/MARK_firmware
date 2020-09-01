@@ -93,6 +93,23 @@ menu "Micropython configurations"
 			default n
 			select SPEECH_RECOGNIZER_ENABLE
 			
+		config MICROPY_SSL_ENABLE
+			bool "Enable Https SSL"
+			default n
+			
+	endmenu
+
+	menu "Builtin py modules configurations"
+
+		config MAIXPY_BUILTIN_PY_PYE
+			bool "Enable builtin py module pye (about 17KiB)"
+			default y
+		config MAIXPY_BUILTIN_PY_BOARD
+			bool "Enable builtin py module board"
+			default y
+		config MAIXPY_BUILTIN_PY_FPIOA_MANAGER
+			bool "Enable builtin py module fpioa_manager"
+			default y
 	endmenu
 
 	menu "Debug configurations"
