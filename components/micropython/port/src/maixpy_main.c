@@ -305,34 +305,6 @@ void load_config_from_spiffs(config_data_t *config)
     config->freq_pll1 = FREQ_PLL1_DEFAULT;
     config->kpu_div = 1;
     config->gc_heap_size = CONFIG_MAIXPY_GC_HEAP_SIZE;
-    if (fd <= 0)
-    {
-        // init data;
-        flash_error = save_config_to_spiffs(config);
-    }
-    else
-    {
-        // memset(config, 0, sizeof(config_data_t));
-        ret = SPIFFS_read(&spiffs_user_mount_handle.fs, fd, config, sizeof(config_data_t));
-        if (ret <= 0)
-        {
-            printk("maixpy can't load freq.conf\t\r\n");
-            flash_error = false;
-        }
-        else
-        {
-            config->freq_cpu = config->freq_cpu > FREQ_CPU_MAX ? FREQ_CPU_MAX : config->freq_cpu;
-            config->freq_cpu = config->freq_cpu < FREQ_CPU_MIN ? FREQ_CPU_MIN : config->freq_cpu;
-            config->freq_pll1 = config->freq_pll1 > FREQ_PLL1_MAX ? FREQ_PLL1_MAX : config->freq_pll1;
-            config->freq_pll1 = config->freq_pll1 < FREQ_PLL1_MIN ? FREQ_PLL1_MIN : config->freq_pll1;
-            if (config->kpu_div == 0)
-                config->kpu_div = 1;
-            if (config->gc_heap_size == 0)
-            {
-                config->gc_heap_size = CONFIG_MAIXPY_GC_HEAP_SIZE;
-            }
-        }
-    }
     SPIFFS_close(&spiffs_user_mount_handle.fs, fd);
 }
 
