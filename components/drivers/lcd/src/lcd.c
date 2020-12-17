@@ -172,9 +172,11 @@ void lcd_init_sequence_for_ili9486(void)
 
 }
 
-int lcd_init(uint32_t freq, bool oct, uint16_t offset_w0, uint16_t offset_h0, uint16_t offset_w1, uint16_t offset_h1, bool invert_color, uint16_t width, uint16_t height)
+int lcd_init(uint32_t freq, bool oct, uint16_t offset_w0, uint16_t offset_h0, uint16_t offset_w1, uint16_t offset_h1, bool invert_color, uint8_t dir, uint16_t width, uint16_t height)
 {
     uint8_t data = 0;
+    lcd_ctl.dir = dir;
+    lcd_ctl.width = width, lcd_ctl.height = height;
     lcd_ctl.start_offset_w0 = offset_w0;
     lcd_ctl.start_offset_h0 = offset_h0;
     lcd_ctl.start_offset_w1 = offset_w1;
@@ -194,7 +196,7 @@ int lcd_init(uint32_t freq, bool oct, uint16_t offset_w0, uint16_t offset_h0, ui
     tft_hard_init(freq, oct);
     /*soft reset*/
     tft_write_command(SOFTWARE_RESET);
-    msleep(150);
+    msleep(50);
     if (lcd_preinit_handler != NULL)
     {
         lcd_preinit_handler();
@@ -202,7 +204,7 @@ int lcd_init(uint32_t freq, bool oct, uint16_t offset_w0, uint16_t offset_h0, ui
 
     /*exit sleep*/
     tft_write_command(SLEEP_OFF);
-    msleep(500);
+    msleep(120);
     /*pixel format*/
     tft_write_command(PIXEL_FORMAT_SET);
     data = 0x55;
@@ -221,7 +223,7 @@ int lcd_init(uint32_t freq, bool oct, uint16_t offset_w0, uint16_t offset_h0, ui
     msleep(10);
     /*display on*/
     tft_write_command(DISPALY_ON);
-    msleep(100);
+    // msleep(100);
     lcd_polling_enable();
     return 0;
 }
@@ -248,13 +250,14 @@ uint16_t lcd_get_height()
     return g_lcd_h;
 }
 
+#include "printf.h"
 
 void lcd_set_direction(lcd_dir_t dir)
 {
     if(!g_lcd_init)
         return;
     //dir |= 0x08;  //excahnge RGB
-    lcd_ctl.dir = dir;
+    dir = ((lcd_ctl.dir & DIR_RGB2BRG) == DIR_RGB2BRG) ? (dir | DIR_RGB2BRG) : dir;
 
 #if defined(CONFIG_BOARD_TWATCH)
     lcd_ctl.width = g_lcd_w - 1;
@@ -505,6 +508,7 @@ void lcd_draw_picture(uint16_t x1, uint16_t y1, uint16_t width, uint16_t height,
     uint32_t i;
     uint16_t* p = (uint16_t*)ptr;
     bool odd = false;
+    extern volatile bool maixpy_sdcard_loading;
 
     lcd_set_area(x1, y1, x1 + width - 1, y1 + height - 1);
     g_pixs_draw_pic_size = width*height;
@@ -524,22 +528,36 @@ void lcd_draw_picture(uint16_t x1, uint16_t y1, uint16_t width, uint16_t height,
     }
     if( g_pixs_draw_pic_size > 0)
     {
-        g_pixs_draw_pic_half_size = g_pixs_draw_pic_size/2;
-        g_pixs_draw_pic_half_size = (g_pixs_draw_pic_half_size%2) ? (g_pixs_draw_pic_half_size+1) : g_pixs_draw_pic_half_size;
-        g_pixs_draw_pic = p+g_pixs_draw_pic_half_size;
-        dual_func = swap_pixs_half;
-        for(i=0; i< g_pixs_draw_pic_half_size; i+=2)
-        {
-            #if LCD_SWAP_COLOR_BYTES
-                g_lcd_display_buff[i] = SWAP_16(*(p+1));
-                g_lcd_display_buff[i+1] = SWAP_16(*(p));
-            #else
-                g_lcd_display_buff[i] = *(p+1);
-                g_lcd_display_buff[i+1] = *p;
-            #endif
-            p+=2;
+        if (maixpy_sdcard_loading) {
+            for(i=0; i< g_pixs_draw_pic_size; i+=2)
+            {
+                #if LCD_SWAP_COLOR_BYTES
+                    g_lcd_display_buff[i] = SWAP_16(*(p+1));
+                    g_lcd_display_buff[i+1] = SWAP_16(*(p));
+                #else
+                    g_lcd_display_buff[i] = *(p+1);
+                    g_lcd_display_buff[i+1] = *p;
+                #endif
+                p+=2;
+            }
+        } else {
+            g_pixs_draw_pic_half_size = g_pixs_draw_pic_size/2;
+            g_pixs_draw_pic_half_size = (g_pixs_draw_pic_half_size%2) ? (g_pixs_draw_pic_half_size+1) : g_pixs_draw_pic_half_size;
+            g_pixs_draw_pic = p+g_pixs_draw_pic_half_size;
+            dual_func = swap_pixs_half;
+            for(i=0; i< g_pixs_draw_pic_half_size; i+=2)
+            {
+                #if LCD_SWAP_COLOR_BYTES
+                    g_lcd_display_buff[i] = SWAP_16(*(p+1));
+                    g_lcd_display_buff[i+1] = SWAP_16(*(p));
+                #else
+                    g_lcd_display_buff[i] = *(p+1);
+                    g_lcd_display_buff[i+1] = *p;
+                #endif
+                p+=2;
+            }
+            while(dual_func){}
         }
-        while(dual_func){}
         tft_write_word((uint32_t*)g_lcd_display_buff, g_pixs_draw_pic_size / 2);
     }
     if( odd )

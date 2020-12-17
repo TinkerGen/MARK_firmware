@@ -443,11 +443,11 @@ int sensro_gc_detect(sensor_t *sensor, bool pwnd)
     // mp_printf(&mp_plat_print, "[MAIXPY]: find gc sensor\n");
     if (pwnd)
         DCMI_PWDN_LOW(); //enable gc0328 要恢复 normal 工作模式，需将 PWDN pin 接入低电平即可，同时写入初始化寄存器即可
-    DCMI_RESET_LOW();    //reset gc3028
+    DCMI_RESET_LOW();    //reset gc0328
     mp_hal_delay_ms(10);
     DCMI_RESET_HIGH();
     mp_hal_delay_ms(10);
-    
+
     int init_ret = 0;
     /* Reset the sensor */
     DCMI_RESET_HIGH();
@@ -522,7 +522,7 @@ int sensro_gc_detect(sensor_t *sensor, bool pwnd)
         {
         case GC0328_ID:
             sensor->slv_addr = GC0328_ADDR;
-            mp_printf(&mp_plat_print, "[MAIXPY]: find gc3028\n");
+            mp_printf(&mp_plat_print, "[MAIXPY]: find gc0328\n");
             gc0328_init(sensor);
             break;
         case GC2145_ID:
@@ -903,7 +903,7 @@ int binocular_sensor_reset(mp_int_t freq)
         if (0 == sensro_gc_detect(&sensor, false))
         {
             //find gc0328 sensor
-            mp_printf(&mp_plat_print, "[MAIXPY]: sensor1 find gc3028\n");
+            mp_printf(&mp_plat_print, "[MAIXPY]: sensor1 find gc0328\n");
             cambus_set_writeb_delay(2);
         }
         else
@@ -915,7 +915,7 @@ int binocular_sensor_reset(mp_int_t freq)
         if (0 == sensro_gc_detect(&sensor, false))
         {
             //find gc0328 sensor
-            mp_printf(&mp_plat_print, "[MAIXPY]: sensor2 find gc3028\n");
+            mp_printf(&mp_plat_print, "[MAIXPY]: sensor2 find gc0328\n");
             cambus_set_writeb_delay(2);
         }
         else
@@ -1050,7 +1050,7 @@ int sensor_set_pixformat(pixformat_t pixformat, bool set_regs)
     {
     case PIXFORMAT_RGB565:
         // monkey patch about ide default sensor.set_pixformat(sensor.RGB565) but it need sensor.YUV422
-        if (sensor.chip_id != OV7740_ID && sensor.chip_id != GC0328_ID && sensor.chip_id != OV2640_ID) 
+        if (sensor.chip_id != OV7740_ID && sensor.chip_id != GC0328_ID && sensor.chip_id != OV2640_ID)
         {
             dvp_set_image_format(DVP_CFG_RGB_FORMAT);
             break;
@@ -1694,67 +1694,15 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
         //exchang_data_byte((image->pixels), (MAIN_FB()->w)*(MAIN_FB()->h)*2);
         //exchang_pixel((image->pixels), (MAIN_FB()->w)*(MAIN_FB()->h)); //cost 3ms@400M
 
-        // soft hmirror
-        if (sensor->chip_id == OV7740_ID && sensor->hmirror)
+        if (sensor->pixformat == PIXFORMAT_GRAYSCALE)
         {
-            uint16_t temp;
-            uint32_t width = image->w;
-            uint32_t height = image->h;
-            uint16_t *p;
-            uint32_t temp_addr1, temp_addr2, temp_addr3;
-            if (sensor->pixformat == PIXFORMAT_GRAYSCALE)
-            {
-                image->pixels = image->pix_ai;
-                for (uint32_t i = 0; i < width / 2; ++i)
-                {
-                    for (uint32_t j = 0; j < height; ++j)
-                    {
-                        temp = image->pixels[i + width * j];
-                        image->pixels[i + width * j] = image->pixels[(width - 1 - i) + width * j];
-                        image->pixels[(width - 1 - i) + width * j] = temp;
-                    }
-                }
-            }
-            else
-            {
-                p = (uint16_t *)image->pixels;
-                reverse_u32pixel((uint32_t *)(image->pixels), (MAIN_FB()->w) * (MAIN_FB()->h) / 2);
-                //TODO: odd width
-                for (uint32_t i = 0; i < width / 2; ++i)
-                {
-                    for (uint32_t j = 0; j < height; ++j)
-                    {
-                        //TODO: optimize by RISCV ASM var swap
-                        temp_addr1 = i + width * j;
-                        temp_addr2 = (width - 1 - i) + width * j;
-                        temp_addr3 = width * height;
-                        temp = p[temp_addr1];
-                        p[temp_addr1] = p[temp_addr2];
-                        p[temp_addr2] = temp;
-                        // temp = image->pix_ai[temp_addr1];
-                        // image->pix_ai[temp_addr1] = image->pix_ai[temp_addr2];
-                        // image->pix_ai[temp_addr2] = temp;
-                        // temp = image->pix_ai[temp_addr1 + temp_addr3];
-                        // image->pix_ai[temp_addr1 + temp_addr3] = image->pix_ai[temp_addr2 + temp_addr3];
-                        // image->pix_ai[temp_addr2 + temp_addr3] = temp;
-                        // temp = image->pix_ai[temp_addr1 + temp_addr3*2];
-                        // image->pix_ai[temp_addr1 + temp_addr3*2] = image->pix_ai[temp_addr2 + temp_addr3*2];
-                        // image->pix_ai[temp_addr2 + temp_addr3*2] = temp;
-                    }
-                }
-            }
+            image->pixels = image->pix_ai;
         }
         else
         {
-            if (sensor->pixformat == PIXFORMAT_GRAYSCALE)
-            {
-                image->pixels = image->pix_ai;
-            }
-            else
-            {
-                reverse_u32pixel((uint32_t *)(image->pixels), (MAIN_FB()->w) * (MAIN_FB()->h) / 2);
-            }
+            reverse_u32pixel((uint32_t *)(image->pixels), (MAIN_FB()->w) * (MAIN_FB()->h) / 2);
         }
+
         //t1=read_cycle();
         //mp_printf(&mp_plat_print, "%ld-%ld=%ld, %ld us!\r\n",t1,t0,(t1-t0),((t1-t0)*1000000/400000000));
         if (streaming_cb)

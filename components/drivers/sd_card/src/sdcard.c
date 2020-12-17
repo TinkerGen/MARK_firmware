@@ -48,7 +48,13 @@
 #define SD_CMD58 58  /*!< CMD58 = 0x58 */
 #define SD_CMD59 59  /*!< CMD59 = 0x59 */
 
-sdcard_config_t config;
+sdcard_config_t config = { // see struct sdcard_config_t
+#ifdef CONFIG_BOARD_M5STICK
+    33, 31, 30, 32, SD_CS_PIN,
+#else
+    28, 26, 27, 29, SD_CS_PIN,
+#endif
+};
 
 SD_CardInfo cardinfo;
 int sd_version = 0;
@@ -65,7 +71,7 @@ void SD_CS_LOW(void)
 
 void SD_HIGH_SPEED_ENABLE(void)
 {
-    spi_set_clk_rate(SD_SPI_DEVICE, 10000000);
+    spi_set_clk_rate(SD_SPI_DEVICE, 25000000);
 }
 
 void SD_LOW_SPEED_ENABLE(void)
@@ -158,7 +164,7 @@ static void sd_end_cmd(void)
 static uint8_t sd_get_response(void)
 {
     uint8_t result;
-    uint16_t timeout = 0x0FFF;
+    uint16_t timeout = 0xFFFF;
     /*!< Check if response is got or a timeout is happen */
     while (timeout--)
     {
@@ -380,12 +386,12 @@ static uint8_t sd_get_cardinfo(SD_CardInfo *cardinfo)
 {
     if (sd_get_csdregister(&(cardinfo->SD_csd)))
     {
-        // mp_printf(&mp_plat_print, "[MaixPy] %s | sd_get_csdregister failed\r\n",__func__);
+        debug_print("[MaixPy] %s | sd_get_csdregister failed\r\n",__func__);
         return 0xFF;
     }
     if (sd_get_cidregister(&(cardinfo->SD_cid)))
     {
-        // mp_printf(&mp_plat_print, "[MaixPy] %s | sd_get_cidregister failed\r\n",__func__);
+        debug_print("[MaixPy] %s | sd_get_cidregister failed\r\n",__func__);
         return 0xFF;
     }
     if (2 == sd_version)
@@ -403,16 +409,6 @@ static uint8_t sd_get_cardinfo(SD_CardInfo *cardinfo)
     return 0;
 }
 
-sd_preinit_handler_t sd_preinit_handler = NULL;
-
-/**
- * Register Pre-initialization handler for sd_card
- */
-void sd_preinit_register_handler(sd_preinit_handler_t handler)
-{
-    sd_preinit_handler = handler;
-}
-
 /*
  * @brief  Initializes the SD/SD communication.
  * @param  None
@@ -425,25 +421,6 @@ uint8_t sd_init(void)
     uint8_t frame[10], index, result;
     cardinfo.active = 0;
 
-#ifdef CONFIG_BOARD_M5STICK
-    config.sclk_pin = 30;
-    config.mosi_pin = 33;
-    config.miso_pin = 31;
-    config.cs_gpio_num = SD_CS_PIN;
-    config.cs_pin = SD_CS_PIN;
-
-#else
-    // assert(sd_preinit_handler == NULL);
-    config.sclk_pin = 27;
-    config.mosi_pin = 28;
-    config.miso_pin = 26;
-    config.cs_gpio_num = SD_CS_PIN;
-    config.cs_pin = 29;
-    if (sd_preinit_handler != NULL)
-    {
-        sd_preinit_handler(&config);
-    }
-#endif
     fpioa_set_function(config.sclk_pin, FUNC_SPI1_SCLK);
     fpioa_set_function(config.mosi_pin, FUNC_SPI1_D0);
     fpioa_set_function(config.miso_pin, FUNC_SPI1_D1);
@@ -467,7 +444,7 @@ uint8_t sd_init(void)
     sd_end_cmd();
     if (result != 0x01)
     {
-        // mp_printf(&mp_plat_print, "[MaixPy] %s | SD_CMD0 is %X\r\n",__func__,result);
+        debug_print("[MaixPy] %s | SD_CMD0 is %X\r\n",__func__,result);
         return 0xFF;
     }
 
@@ -478,7 +455,7 @@ uint8_t sd_init(void)
     sd_end_cmd();
     if (result != 0x01)
     {
-        // mp_printf(&mp_plat_print, "[MaixPy] %s | SD_CMD8 is %X\r\n",__func__,result);
+        debug_print("[MaixPy] %s | SD_CMD8 is %X\r\n",__func__,result);
         return 0xFF;
     }
     index = 0xFF;
@@ -489,7 +466,7 @@ uint8_t sd_init(void)
         sd_end_cmd();
         if (result != 0x01)
         {
-            // mp_printf(&mp_plat_print, "SD_CMD55 ack %X\r\n", result);
+            debug_print("SD_CMD55 ack %X\r\n", result);
             return 0xFF;
         }
         sd_send_cmd(SD_ACMD41, 0x40000000, 0);
@@ -500,7 +477,7 @@ uint8_t sd_init(void)
     }
     if (index == 0)
     {
-        // mp_printf(&mp_plat_print, "SD_CMD55 is %X\r\n", result);
+        debug_print("SD_CMD55 is %X\r\n", result);
         return 0xFF;
     }
     index = 255;
@@ -523,7 +500,7 @@ uint8_t sd_init(void)
     }
     if (index == 0)
     {
-        // mp_printf(&mp_plat_print, "[MaixPy] %s | SD_CMD58 is %X\r\n",__func__,result);
+        debug_print("[MaixPy] %s | SD_CMD58 is %X\r\n",__func__,result);
         return 0xFF;
     }
     if ((frame[0] & 0x40) == 0)
@@ -681,6 +658,7 @@ uint8_t sd_read_sector_dma(uint8_t *data_buff, uint32_t sector, uint32_t count)
     if (sd_get_response() != 0x00)
     {
         sd_end_cmd();
+        debug_print("%s sd_get_response() != 0x00 %d\r\n", __func__, flag);
         return 0xFF;
     }
     while (count)
@@ -688,7 +666,7 @@ uint8_t sd_read_sector_dma(uint8_t *data_buff, uint32_t sector, uint32_t count)
         if (sd_get_response() != SD_START_DATA_SINGLE_BLOCK_READ)
             break;
         /*!< Read the SD block data : read NumByteToRead data */
-        sd_read_data_dma(data_buff);
+        sd_read_data_dma(data_buff); // close recv dma
         /*!< Get CRC bytes (not really needed by us, but required by SD) */
         sd_read_data(frame, 2);
         data_buff += 512;

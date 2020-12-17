@@ -35,9 +35,9 @@ static uint16_t height_curr = 0, height_conf = 0;
 static enum {
     LCD_NONE,
     LCD_SHIELD,
+    LCD_IPS_240X240,
     LCD_M5STICK,
     LCD_TWATCH,
-    LCD_IPS_240X240
 } type = LCD_NONE;
 static uint8_t rotation = 0;
 static bool invert = false;
@@ -196,7 +196,7 @@ static mp_obj_t py_lcd_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *k
         {MP_QSTR_color, MP_ARG_OBJ, {.u_obj = MP_OBJ_NULL}},
         {MP_QSTR_width, MP_ARG_INT, {.u_int = CONFIG_LCD_DEFAULT_WIDTH}},
         {MP_QSTR_height, MP_ARG_INT, {.u_int = CONFIG_LCD_DEFAULT_HEIGHT}},
-        {MP_QSTR_invert, MP_ARG_INT, {.u_int = -1}},
+        {MP_QSTR_invert, MP_ARG_INT, {.u_int = 0}},
         {MP_QSTR_offset_w0, MP_ARG_INT, {.u_int = 0}},
         {MP_QSTR_offset_h0, MP_ARG_INT, {.u_int = 0}},
         {MP_QSTR_offset_w1, MP_ARG_INT, {.u_int = 0}},
@@ -230,19 +230,6 @@ static mp_obj_t py_lcd_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *k
         return mp_const_none;
     case LCD_SHIELD:
     {
-        /*
-        width_conf = args[ARG_width].u_int;
-        height_conf = args[ARG_height].u_int;
-        width_curr = width_conf;
-        height_curr = height_conf;
-        type = LCD_SHIELD;
-
-        int rst = args[ARG_rst].u_int;
-        int dcx = args[ARG_dcx].u_int;
-        int ss = args[ARG_ss].u_int;
-        int clk = args[ARG_clk].u_int;
-        py_lcd_load_config(&rst, &dcx, &ss, &clk);
-         */
         type = LCD_SHIELD;
 
         py_lcd_config_t lcd_cfg;
@@ -254,32 +241,31 @@ static mp_obj_t py_lcd_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *k
         lcd_cfg.width = args[ARG_width].u_int;
         lcd_cfg.height = args[ARG_height].u_int;
         lcd_cfg.invert = args[ARG_invert].u_int;
-        
+
         lcd_cfg.offset_w0 = args[ARG_offset_w0].u_int;
         lcd_cfg.offset_h0 = args[ARG_offset_h0].u_int;
 
         lcd_cfg.offset_w1 = args[ARG_offset_w1].u_int;
         lcd_cfg.offset_h1 = args[ARG_offset_h1].u_int;
-        
+
         lcd_cfg.dir = 0;
-        lcd_cfg.invert = 0;
         py_lcd_load_config(&lcd_cfg);
-      
 
         width_conf = lcd_cfg.width;
         height_conf = lcd_cfg.height;
         width_curr = width_conf;
         height_curr = height_conf;
-        invert = (lcd_cfg.invert != 1) ? false : true;
-        
+
+        invert = (lcd_cfg.invert == 1) ? true : false;
+
         // backlight_init = false;
         fpioa_set_function(lcd_cfg.rst_pin, FUNC_GPIOHS0 + RST_GPIONUM);
         fpioa_set_function(lcd_cfg.dcx_pin, FUNC_GPIOHS0 + DCX_GPIONUM);
         fpioa_set_function(lcd_cfg.cs_pin, FUNC_SPI0_SS0 + LCD_SPI_SLAVE_SELECT);
         fpioa_set_function(lcd_cfg.clk_pin, FUNC_SPI0_SCLK);
 
-        // mp_printf(&mp_plat_print, "[%d]: lcd_cfg.offset_x1=%d, offset_y1=%d, offset_x2=%d, offset_y2=%d 
-        //     width_curr=%d, height_curr=%d, invert=%d, lcd_type=%d\r\n", __LINE__, 
+        // mp_printf(&mp_plat_print, "[%d]: lcd_cfg.offset_x1=%d, offset_y1=%d, offset_x2=%d, offset_y2=%d
+        //     width_curr=%d, height_curr=%d, invert=%d, lcd_type=%d\r\n", __LINE__,
         //     lcd_cfg.offset_x1, lcd_cfg.offset_y1, lcd_cfg.offset_x2, lcd_cfg.offset_y2,
         //     width_curr, height_curr, invert, lcd_cfg.lcd_type);
         if (lcd_cfg.lcd_type == LCD_TYPE_ILI9486)
@@ -287,7 +273,7 @@ static mp_obj_t py_lcd_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *k
             lcd_preinit_register_handler(&lcd_init_sequence_for_ili9486);
         }
         ret = lcd_init(args[ARG_freq].u_int, true, lcd_cfg.offset_w0, lcd_cfg.offset_h0,
-                       lcd_cfg.offset_w1, lcd_cfg.offset_h1, invert, width_curr, height_curr);
+                       lcd_cfg.offset_w1, lcd_cfg.offset_h1, invert, lcd_cfg.dir, width_curr, height_curr);
         if (0 != lcd_cfg.dir)
         {
             lcd_set_direction(lcd_cfg.dir);
@@ -307,7 +293,7 @@ static mp_obj_t py_lcd_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *k
         fpioa_set_function(22, FUNC_SPI0_SS0 + LCD_SPI_SLAVE_SELECT);
         fpioa_set_function(19, FUNC_SPI0_SCLK);
         fpioa_set_function(18, FUNC_SPI0_D0);
-        ret = lcd_init(args[ARG_freq].u_int, false, 52, 40, 40, 52, true, width_curr, height_curr);
+        ret = lcd_init(args[ARG_freq].u_int, false, 52, 40, 40, 52, true, 0, width_curr, height_curr);
         lcd_clear(color);
         break;
     }
@@ -322,7 +308,7 @@ static mp_obj_t py_lcd_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *k
         fpioa_set_function(38, FUNC_GPIOHS0 + DCX_GPIONUM);
         fpioa_set_function(36, FUNC_SPI0_SS0 + LCD_SPI_SLAVE_SELECT);
         fpioa_set_function(39, FUNC_SPI0_SCLK);
-        ret = lcd_init(args[ARG_freq].u_int, true, 0, 0, 0, 0, true, width_curr, height_curr);
+        ret = lcd_init(args[ARG_freq].u_int, true, 0, 0, 0, 0, true, 0, width_curr, height_curr);
         lcd_clear(color);
         break;
     }
@@ -348,7 +334,7 @@ static mp_obj_t py_lcd_init(size_t n_args, const mp_obj_t *pos_args, mp_map_t *k
         if (args[ARG_offset_h1].u_int == -1)
             offset_h1 = 0;
         ret = lcd_init(args[ARG_freq].u_int, true, offset_w0, offset_h0,
-                       offset_w1, offset_h1, args[ARG_invert].u_int == 0 ? false : true, width_curr, height_curr);
+                       offset_w1, offset_h1, args[ARG_invert].u_int == 0 ? false : true, 0, width_curr, height_curr);
         lcd_clear(color);
         break;
     }
@@ -383,6 +369,17 @@ static mp_obj_t py_lcd_write_register(mp_obj_t addr_obj, mp_obj_t data_obj)
     if (mp_obj_is_integer(data_obj)) {
         uint8_t data = mp_obj_get_int(data_obj);
         tft_write_byte(&data, 1);
+    }
+    if(&mp_type_list == mp_obj_get_type(data_obj))
+    {
+        size_t len;
+        mp_obj_t *items;
+        mp_obj_list_get(data_obj, &len, &items);
+        for (mp_int_t i = 0; i < len; i++) {
+            mp_obj_t obj = items[i];
+            uint8_t data = mp_obj_get_int(obj);
+            tft_write_byte(&data, 1);
+        }
     }
     return mp_const_none;
 }
@@ -678,14 +675,14 @@ end:
     return mp_obj_new_int(invert);
 }
 
-//x0,y0,string,font color,bg color
+extern void imlib_draw_ascii_string(image_t *img, int x_off, int y_off, const char *str, int c, float scale, int x_spacing, int y_spacing, bool mono_space);
 STATIC mp_obj_t py_lcd_draw_string(size_t n_args, const mp_obj_t *args)
 {
-    uint32_t *str_buf = NULL;
-    char *str_cut = NULL;
+    uint8_t* str_buf = NULL;
+    char* str_cut = NULL;
     if (width_conf == 0 || height_conf == 0)
         mp_raise_msg(&mp_type_ValueError, "not init");
-    str_buf = (uint32_t *)malloc(width_conf / 8 * 16 * 8 * 2);
+    str_buf = (uint8_t *)malloc(width_conf / 8 * 12 * 8 * 2);
     if (!str_buf)
         mp_raise_OSError(MP_ENOMEM);
     str_cut = (char *)malloc(width_conf / 8 + 1);
@@ -717,9 +714,21 @@ STATIC mp_obj_t py_lcd_draw_string(size_t n_args, const mp_obj_t *args)
     memcpy(str_cut, str, len);
     str_cut[len] = 0;
     width = len * 8;
-    height = 16;
-    lcd_ram_draw_string(str_cut, str_buf, fontc, bgc);
-    lcd_draw_picture(x0, y0, width, height, str_buf);
+    height = 12;
+    image_t arg_img = {
+        .bpp = IMAGE_BPP_RGB565,
+        .w = width,
+        .h = height,
+        .pixels = str_buf
+    };
+    for(int i=0; i< width*height; ++i)
+    {
+        *(uint16_t*)(str_buf + i*2) = (uint16_t)bgc;
+    }
+    imlib_draw_ascii_string(&arg_img, 0, 0, str_cut,
+                      fontc, 1, 0, 0,
+                      true);
+    lcd_draw_picture(x0, y0, width, height, (uint32_t*)str_buf);
     free(str_buf);
     free(str_cut);
     return mp_const_none;
@@ -767,7 +776,7 @@ static const mp_map_elem_t globals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_direction), (mp_obj_t)&py_lcd_direction_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_rotation), (mp_obj_t)&py_lcd_rotation_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_mirror), (mp_obj_t)&py_lcd_invert_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_debug), (mp_obj_t)&py_lcd_write_register_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_register), (mp_obj_t)&py_lcd_write_register_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_draw_string), (mp_obj_t)&py_lcd_draw_string_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_XY_RLUD), MP_OBJ_NEW_SMALL_INT(DIR_XY_RLUD)},
     {MP_OBJ_NEW_QSTR(MP_QSTR_YX_RLUD), MP_OBJ_NEW_SMALL_INT(DIR_YX_RLUD)},
