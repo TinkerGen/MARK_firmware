@@ -9,6 +9,7 @@ if "sd" in devices:
     sys.path.append('/sd')
 os.chdir("/flash")
 sys.path.append('/flash')
+del devices
 
 print("[cyberEye] init end") # for IDE
 for i in range(200):
@@ -21,6 +22,7 @@ ide = True
 try:
     f = open(ide_mode_conf)
     f.close()
+    del f
 except Exception:
     ide = False
 
@@ -32,48 +34,44 @@ if ide:
     repl = UART.repl_uart()
     repl.init(1500000, 8, None, 1, read_buf_len=2048, ide=True, from_ide=False)
     sys.exit()
-
-
-import gc
-import machine
-try:
-    from board import board_info
-    from fpioa_manager import fm
-    from pye_mp import pye
-except Exception:
-    pass
-from Maix import FPIOA, GPIO
-
+del ide, ide_mode_conf
 
 # detect boot.py
 main_py = '''
+from chproduct import product_lang
 from fpioa_manager import *
 import os, Maix, lcd, image, time
 from Maix import FPIOA, GPIO
 import gc
-from Maix import utils
-utils.gc_heap_size(900000)
+
+gc.threshold(1024*32)
 
 def exception_output(e):
     lcd.clear()
+
+    lang = product_lang()
+
+    if "cn" in lang:
+        lcd.display(image.Image('error_cn.jpg'))
+    else:
+        lcd.display(image.Image('error_en.jpg'))
+
     if str(e) == "[Errno 5] EIO":
         e = "EIO Error - please turn on the power switch and reboot MARK"
     print(e)
     num_rows = len(str(e))//30+1
     for i in range(num_rows):
-    	lcd.draw_string(0,i*15, str(e)[i*30:i*30+30], lcd.RED, lcd.BLACK)
-    time.sleep(10)
-    raise
+        lcd.draw_string(0,i*15, str(e)[i*30:i*30+30], lcd.RED, lcd.WHITE)
 
+    time.sleep(5)
 
 try:
     first_boot = "first_boot" in os.listdir("/flash")
 
     boot_pressed = 0
-    test_pin=16
     fpioa = FPIOA()
-    fpioa.set_function(test_pin,FPIOA.GPIO7)
-    test_gpio=GPIO(GPIO.GPIO7,GPIO.IN)
+    fpioa.set_function(16, FPIOA.GPIO7)
+    test_gpio = GPIO(GPIO.GPIO7, GPIO.IN)
 
     lcd.init()
     lcd.rotation(1)
@@ -82,6 +80,7 @@ try:
         lcd.display(image.Image('first_boot.jpg'))
         os.remove("/flash/first_boot")
         time.sleep(2)
+        gc.collect()
         from preloaded import *
 
     else:
@@ -92,8 +91,9 @@ try:
                 boot_pressed += 1
                 time.sleep(0.5)
                 start_time =  time.ticks_ms()
-                lcd.draw_string(0, 0, str(boot_pressed), lcd.RED, lcd.BLACK)
+                lcd.draw_string(0, 0, str(boot_pressed), lcd.RED, lcd.WHITE)
         if boot_pressed == 2:
+            gc.collect()
             from preloaded import *
         if boot_pressed > 2:
             from remote import *
@@ -103,6 +103,7 @@ try:
 
 except Exception as e:
     exception_output(e)
+    raise
 '''
 
 flash_ls = os.listdir()
@@ -110,6 +111,7 @@ if not "main.py" in flash_ls:
     f = open("main.py", "wb")
     f.write(main_py)
     f.close()
+    del f
 del main_py
 
 flash_ls = os.listdir("/flash")

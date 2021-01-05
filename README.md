@@ -1,4 +1,4 @@
-<img width=205 src="assets/image/maixpy.png">
+<img height=230 src="assets/image/maixpy.png">
 
 <br />
 <img width=205 src="assets/image/mark.png">
@@ -11,25 +11,13 @@
 </div>
 
 <br />
-
-<a href="https://travis-ci.org/sipeed/MaixPy">
-    <img src="https://travis-ci.org/sipeed/MaixPy.svg?branch=master" alt="Master branch build status" />
-</a>
-<a href="http://dl.sipeed.com/MAIX/MaixPy/release/master/">
-    <img src="https://img.shields.io/badge/build-master-ff69b4.svg" alt="master build firmware" />
-</a>
-<a href="https://github.com/sipeed/MaixPy/releases">
-    <img src="https://img.shields.io/github/release/sipeed/maixpy.svg" alt="Latest release version" />
-</a>
-<a href="https://github.com/sipeed/MaixPy/blob/master/LICENSE.md">
-    <img src="https://img.shields.io/badge/license-Apache%20v2.0-orange.svg" alt="License" />
-</a>
-
 <br />
+
 
 [中文](README_ZH.md)
 
-<br />
+<br/>
+<br/>
 
 **TinkerGen**
 
@@ -40,7 +28,7 @@ Make A Robot Kit, also known as “M.A.R.K.” is a versatile intelligent car de
 This repository contains TinkerGen version of MARK Micropython firmware. The Micropython code can be found in [this repository](https://github.com/TinkerGen/Mark-micropython). If you're not sure what you're looking for, think of firmware as an "OS"(like Windows/Linux/Mac OS), which is responsible for low-level hardware control and Micropython code as "programs"(similiar to Office/browser/etc).
 
 > K210 brief: 
-> * Image Recognition with hardware acceleration
+> * Image Recognition with hardware AI acceleration
 > * Dual core with FPU
 > * 8MB(6MB+2MB) RAM
 > * 16MB external Flash
@@ -71,7 +59,9 @@ Go to [maixhub.com](https://www.maixhub.com/compile.html) to use online compilat
 
 ## Model hub: Maixhub.com
 
-Find more models on [Maixhub.com](https://maixhub.com)
+Find more models on [Maixhub.com](https://maixhub.com) or train your own models with aXeleRate, a Keras-based framework for AI on the edge:
+
+https://github.com/AIWintermuteAI/aXeleRate
 
 
 ## License
@@ -94,5 +84,3 @@ python3 project.py menuconfig
 python3 project.py build
 python3 project.py flash -B dan -b 1500000 -p /dev/ttyUSB0 -t
 ```
-
-
