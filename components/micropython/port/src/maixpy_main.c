@@ -174,8 +174,8 @@ STATIC bool init_sdcard_fs(void)
             }
             if (first_part)
             {
-                // use SD card as current directory
-                MP_STATE_PORT(vfs_cur) = vfs;
+                // DO NOT use SD card as current directory
+                //MP_STATE_PORT(vfs_cur) = vfs;
                 first_part = false;
             }
         }
@@ -494,7 +494,7 @@ soft_reset:
 #endif
 #if MICROPY_ENABLE_GC
     gc_init(gc_heap, gc_heap + config->gc_heap_size);
-    printk("[MaixPy] gc heap=%p-%p(%d)\r\n", gc_heap, gc_heap + config->gc_heap_size, config->gc_heap_size);
+    printk("[cyberEye] gc heap=%p-%p(%d)\r\n", gc_heap, gc_heap + config->gc_heap_size, config->gc_heap_size);
 #endif
     mp_init();
     mp_obj_list_init(mp_sys_path, 0);
